@@ -1,6 +1,7 @@
 import sys
 import pyzed.sl as sl
 import cv2
+from tkinter import *
 
 paused=False
 cam = sl.Camera()
@@ -33,20 +34,33 @@ def main():
     print("  Quit the video reading:      q")
     print("  Pause the video reading:     SPACE")
     print("  Restart the video reading:   r")
+    print("  Step forward:   		  [")
+    print("  Step backward: 		  ]")
+    
+    
+    print("\n\n")
 
 
     while key != 113:  # for 'q' key
-        if not paused or key == 91 or key == 93:
-            err = cam.grab(runtime)
+        if not paused or key == 91 or key == 93 or key == ord('g'):  # Not paused, or paused but pressed '[' or ']' which are step forward/backward
+            err = cam.grab(runtime)		  # Grab a frame to be viewed
         
         if err == sl.ERROR_CODE.SUCCESS:
             cam.retrieve_image(mat)
             frame = mat.get_data()
-            cv2.putText(frame, f'Frame {cam.get_svo_position()}   |   Timestamp {cam.get_timestamp(sl.TIME_REFERENCE.IMAGE).get_milliseconds()}', (50, 50), font, 1, (0, 255, 255), 2, cv2.LINE_4)
+            
+            cv2.putText(frame, f'Frame {cam.get_svo_position()}   |   Timestamp {cam.get_timestamp(sl.TIME_REFERENCE.IMAGE).get_milliseconds()}',
+                        (50, 50),
+                        font, 
+                        1, 
+                        (0, 255, 255), 
+                        2, 
+                        cv2.LINE_4)
+            
             cv2.imshow("ZED", frame)
 
             key = cv2.waitKey(1)
-            saving_image(key, mat)
+            # saving_image(key, mat)
             svo_controls(key) 
         else:
             key = cv2.waitKey(1)
@@ -69,6 +83,17 @@ def svo_controls(key):
         cam.set_svo_position(cam.get_svo_position()-1)
     if key == 93: # ]
         cam.set_svo_position(cam.get_svo_position()+1)
+    if paused and key == ord('g'):
+        master = Tk()
+        e = Entry(master)
+        e.pack()
+        e.focus_set()
+        def callback():
+             cam.set_svo_position(int(e.get()))
+             master.destroy()
+        b=Button(master, text='GO', width = 10, command=callback)
+        b.pack()
+        mainloop()
 
 def print_camera_information(cam):
     while True:
