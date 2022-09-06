@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import sys
 import cv2
 import numpy as np
@@ -19,7 +20,7 @@ def main():
 
     # Init parameters
     init = sl.InitParameters(camera_resolution=sl.RESOLUTION.HD720,
-                            svo_real_time_mode=True,
+                            svo_real_time_mode=False,
                             coordinate_units = sl.UNIT.MILLIMETER,
                             coordinate_system = sl.COORDINATE_SYSTEM.IMAGE,
                             depth_mode=sl.DEPTH_MODE.ULTRA) # Choose among NEURAL, ULTRA, QUALITY, PERFORMANCE
@@ -47,12 +48,12 @@ def main():
     cam.enable_positional_tracking(positional_tracking_parameters)
 
     obj_param = sl.ObjectDetectionParameters()      # Define the Object Detection module parameters
-    obj_param.enable_body_fitting = True            # Smooth skeleton move
+    obj_param.enable_body_fitting = False            # Smooth skeleton move
     obj_param.enable_tracking = True                # Track people across images flow
     obj_param.image_sync = True                     # run detection for every Camera grab
-    obj_param.detection_model = sl.DETECTION_MODEL.HUMAN_BODY_FAST  # Object detection model, choose among HUMAN_BODY_ACCURAT, HUMAN_BODY_MEDIUM, HUMAN_BODY_FAST
+    obj_param.detection_model = sl.DETECTION_MODEL.HUMAN_BODY_FAST # Object detection model, choose among HUMAN_BODY_ACCURAT, HUMAN_BODY_MEDIUM, HUMAN_BODY_FAST
     obj_param.body_format = sl.BODY_FORMAT.POSE_18  # Choose the BODY_FORMAT you wish to use
-    obj_param.prediction_timeout_s = 0.2            # Defalt. The time taken before change from present to searching
+    #obj_param.prediction_timeout_s = 0.2            # Defalt. The time taken before change from present to searching
 
     print("Object Detection: Loading Module...")
     err = cam.enable_object_detection(obj_param)
@@ -65,7 +66,7 @@ def main():
     runtime = sl.RuntimeParameters(enable_depth=True)
     
     obj_runtime_param = sl.ObjectDetectionRuntimeParameters()
-    obj_runtime_param.detection_confidence_threshold = 40
+    obj_runtime_param.detection_confidence_threshold = 5
     
     # Get ZED camera information
     camera_info = cam.get_camera_information()

@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import sys
 import cv2
 from tkinter import *
