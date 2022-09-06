@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import os
 import sys
 from signal import signal, SIGINT
@@ -13,25 +14,6 @@ out_dict = []
 rec_path = ""
 stop_signal = False
 
-
-# # ========== Output Thread ========== #
-# def csv_write_thread():
-# 	print(f"[CSV-THREAD] STARTING ...")	
-# 	global out_dict
-# 	global stop_signal
-	
-# 	while not stop_signal:
-# 		time.sleep(30)
-# 		with open(rec_path.replace('svo', 'csv'), 'w') as csvfile:
-# 			writer = csv.DictWriter(csvfile, fieldnames = ['id', 'ts', 'dropped'])
-# 			writer.writeheader()
-# 			writer.writerows(out_dict)
-	
-# 	print(f"[CSV-THREAD] EXIT ...")
-# # Initialize the thread
-# th = threading.Thread(target=csv_write_thread, args=())
-
-
 # ========== Ctrl-C Handler ========== #
 def handler(sig, frame):
 	print("\n\nRecieved Ctrl-C signal!\n")
@@ -39,19 +21,10 @@ def handler(sig, frame):
 	global stop_signal
 	global th
 	
-	# print("[HANDLER] WAITING THREAD TO JOIN")
-	# stop_signal = True
-	# th.join()
-	
 	# Close ZED
 	zed.disable_recording()
 	zed.close()
 	
-	# Write output csv file
-	with open(rec_path.replace('svo', 'csv'), 'w') as csvfile:
-		writer = csv.DictWriter(csvfile, fieldnames = ['id', 'ts', 'dropped'])
-		writer.writeheader()
-		writer.writerows(out_dict)
 	sys.exit(0)
 
 # ========== Helping Functions ========== #
@@ -61,24 +34,34 @@ def path_check():
 	if len(rec_path.split('.')) < 2: rec_path = rec_path.strip() + ".svo"
 	# Check if the path already exists. Add a postfix to it if so.		
 	if os.path.exists(rec_path):
-		print("[ERROR] There already exists an experiment with this name! Enter another experiment name.")
-		exit(1)
+		inp = input("[WARNING] There already exists an experiment with this name! Do you wish to replace it? [Y/N]:  ")
+		if inp == 'Y' or inp == 'y': return rec_path
+		else: exit(1)
 	return rec_path
 
 
 def main():
 	global zed
 	global rec_path
-	# global th
-	
+
 	# arg-parse and output path setting
 	print("\n[INFO] SETTING PATH")
-	if len(sys.argv) > 1: 
-		rec_path = sys.argv[1]
+	if len(sys.argv) > 1:
+		rec_name = sys.argv[1]
+		if len(rec_name.split("/")) > 1: # User has provided a path 
+			if os.path.isdir(rec_name.split("/")[:-1]): # Check if user provided path is correct
+				rec_path = rec_name
+			else:
+				print('[ERROR] The provided directory does not exist!')
+		else: # only experiment name provided. No path. Use default path 
+			rec_path = os.path.join('/home/felemban/Documents', rec_name)
+		
 		rec_path = path_check()
 	else:
-		print('[ERROR] Please Provide experiment path and name (e.g. Home/Desktop/exp1.svo))')
+		print('[ERROR] Please Provide experiment name (e.g. exp1.svo))')
 		exit(1)	
+	
+	print("\n[INFO] OUTPUT PATH SET TO: ", rec_path)
 	
 	# init signal handler
 	signal(SIGINT, handler)
@@ -107,9 +90,6 @@ def main():
 		print(repr(err))
 		exit(1)
 	
-	# Starting thread
-	# th.start()
-
 	frames = -1
 	dropped_frames = 0	
 
@@ -120,14 +100,14 @@ def main():
 			ts = zed.get_timestamp(sl.TIME_REFERENCE.IMAGE).get_milliseconds()
 
 			# Increament frames
-			frames+=1
+#			frames+=1
 			
 			# Record if there was dropped frames before this one and how many are dropped
-			dropped = zed.get_frame_dropped_count()-dropped_frames
-			dropped_frames+=dropped
+#			dropped = zed.get_frame_dropped_count()-dropped_frames
+#			dropped_frames+=dropped
 			
 			# Update output dictionary
-			out_dict.append({'id': frames, 'ts': ts, 'dropped': dropped})
+#			out_dict.append({'id': frames, 'ts': ts, 'dropped': dropped})
 			
 			# Show output on terminal
 			#print(f"Frame: {frames}\tTime Stamp: {ts}\tDropped: {dropped}", end="\r")
