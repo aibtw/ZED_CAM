@@ -3,6 +3,7 @@ import pyzed.sl as sl
 import cv2
 from tkinter import *
 
+
 paused=False
 cam = sl.Camera()
 
@@ -36,6 +37,7 @@ def main():
     print("  Restart the video reading:   r")
     print("  Step forward:   		  [")
     print("  Step backward: 		  ]")
+    print("  when : 		  ]")
     
     
     print("\n\n")
@@ -66,7 +68,7 @@ def main():
             key = cv2.waitKey(1)
     cv2.destroyAllWindows()
 
-    print_camera_information(cam)
+    # print_camera_information(cam)
     cam.close()
     print("\nFINISH")
 
@@ -76,7 +78,7 @@ def svo_controls(key):
     global cam
     
     if key == 32: # space
-    	paused = not paused
+        paused = not paused
     if key == 114: # r
         cam.set_svo_position(0)
     if key == 91: # [
@@ -94,6 +96,20 @@ def svo_controls(key):
         b=Button(master, text='GO', width = 10, command=callback)
         b.pack()
         mainloop()
+
+
+def saving_image(key, mat):
+    if key == 115:
+        img = sl.ERROR_CODE.FAILURE
+        while img != sl.ERROR_CODE.SUCCESS:
+            filepath = input("Enter filepath name: ")
+            img = mat.write(filepath)
+            print("Saving image : {0}".format(repr(img)))
+            if img == sl.ERROR_CODE.SUCCESS:
+                break
+            else:
+                print("Help: you must enter the filepath + filename + PNG extension.")
+
 
 def print_camera_information(cam):
     while True:
@@ -118,20 +134,6 @@ def print_camera_information(cam):
             break
         else:
             print("Error, please enter [y/n].\n")
-
-
-def saving_image(key, mat):
-    if key == 115:
-        img = sl.ERROR_CODE.FAILURE
-        while img != sl.ERROR_CODE.SUCCESS:
-            filepath = input("Enter filepath name: ")
-            img = mat.write(filepath)
-            print("Saving image : {0}".format(repr(img)))
-            if img == sl.ERROR_CODE.SUCCESS:
-                break
-            else:
-                print("Help: you must enter the filepath + filename + PNG extension.")
-
 
 
 if __name__ == "__main__":
