@@ -1,11 +1,10 @@
 import os
 import sys
 from signal import signal, SIGINT
-import cv2
 import time
 import threading
-import pyzed.sl as sl
 import csv
+import pyzed.sl as sl
 
 
 # ========== Global Variables ========== # 
@@ -15,22 +14,22 @@ rec_path = ""
 stop_signal = False
 
 
-# ========== Output Thread ========== #
-def csv_write_thread():
-	print(f"[CSV-THREAD] STARTING ...")	
-	global out_dict
-	global stop_signal
+# # ========== Output Thread ========== #
+# def csv_write_thread():
+# 	print(f"[CSV-THREAD] STARTING ...")	
+# 	global out_dict
+# 	global stop_signal
 	
-	while not stop_signal:
-		time.sleep(30)
-		with open(rec_path.replace('svo', 'csv'), 'w') as csvfile:
-			writer = csv.DictWriter(csvfile, fieldnames = ['id', 'ts', 'mono', 'dropped', 'mono-diff'])
-			writer.writeheader()
-			writer.writerows(out_dict)
+# 	while not stop_signal:
+# 		time.sleep(30)
+# 		with open(rec_path.replace('svo', 'csv'), 'w') as csvfile:
+# 			writer = csv.DictWriter(csvfile, fieldnames = ['id', 'ts', 'dropped'])
+# 			writer.writeheader()
+# 			writer.writerows(out_dict)
 	
-	print(f"[CSV-THREAD] EXIT ...")
-# Initialize the thread
-th = threading.Thread(target=csv_write_thread, args=())
+# 	print(f"[CSV-THREAD] EXIT ...")
+# # Initialize the thread
+# th = threading.Thread(target=csv_write_thread, args=())
 
 
 # ========== Ctrl-C Handler ========== #
@@ -40,19 +39,20 @@ def handler(sig, frame):
 	global stop_signal
 	global th
 	
-	print("[HANDLER] WAITING THREAD TO JOIN")
-	stop_signal = True
-	th.join()
+	# print("[HANDLER] WAITING THREAD TO JOIN")
+	# stop_signal = True
+	# th.join()
 	
+	# Close ZED
 	zed.disable_recording()
 	zed.close()
 	
+	# Write output csv file
 	with open(rec_path.replace('svo', 'csv'), 'w') as csvfile:
-		writer = csv.DictWriter(csvfile, fieldnames = ['id', 'ts', 'mono', 'dropped', 'mono-diff'])
+		writer = csv.DictWriter(csvfile, fieldnames = ['id', 'ts', 'dropped'])
 		writer.writeheader()
 		writer.writerows(out_dict)
 	sys.exit(0)
-
 
 # ========== Helping Functions ========== #
 def path_check():
@@ -66,11 +66,10 @@ def path_check():
 	return rec_path
 
 
-
 def main():
 	global zed
 	global rec_path
-	global th
+	# global th
 	
 	# arg-parse and output path setting
 	print("\n[INFO] SETTING PATH")
@@ -108,32 +107,27 @@ def main():
 		print(repr(err))
 		exit(1)
 	
-	# Start main loop
+	# Starting thread
+	# th.start()
+
 	frames = -1
-	dropped_frames = 0
-	
-	ptime = 0.0
-	ctime = 0.0
-	
-	th.start()
+	dropped_frames = 0	
+
+	# Start main loop
 	while True:
 		if zed.grab(runtime_params) == sl.ERROR_CODE.SUCCESS:
 			# Record timestamp
-			ctime = time.clock_gettime(time.CLOCK_MONOTONIC_RAW)
 			ts = zed.get_timestamp(sl.TIME_REFERENCE.IMAGE).get_milliseconds()
 
 			# Increament frames
 			frames+=1
 			
-			# Record if there was dropped frames before this one and how many
+			# Record if there was dropped frames before this one and how many are dropped
 			dropped = zed.get_frame_dropped_count()-dropped_frames
 			dropped_frames+=dropped
 			
 			# Update output dictionary
-			out_dict.append({'id': frames, 'ts': ts, 'mono': ctime, 'dropped': dropped, 'mono-diff': ctime-ptime})
-			
-			# Update time
-			ptime = ctime
+			out_dict.append({'id': frames, 'ts': ts, 'dropped': dropped})
 			
 			# Show output on terminal
 			#print(f"Frame: {frames}\tTime Stamp: {ts}\tDropped: {dropped}", end="\r")
