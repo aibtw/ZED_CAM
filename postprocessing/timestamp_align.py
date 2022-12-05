@@ -2,6 +2,7 @@ import csv
 import sys
 import os
 import numpy as np
+import pandas as pd
 
 # =============================================================== #
 def main():
@@ -19,9 +20,9 @@ def main():
 
 
 	# ---------------------------------------------------------------------------- #
-	# Read each file into a list of dictionaries, then put all files into a list
+	# Read each file into a list of dictionaries, then put all of them into a list
 	# ... So, one file = [{frame #: x, ts: y}, {frame #: x, ts: y}, ... etc]
-	# ... And a list of files = [file1, file2 ... etc]
+	# ... And a list of files = [file1 data, file2 data ... etc]
 	# ---------------------------------------------------------------------------- #
 	list_of_files = []
 	first_ts = []  # Hold the timestamp of the first frame from each file
@@ -40,9 +41,50 @@ def main():
 	order = np.argsort(first_ts) # ascending order
 	# Determine the file that started last (the one with largest first timestamp), this will be the pivot file
 	largest_ts_file = list_of_files[order[-1]]
+
+
+	# ---------------------------------------------------------------------------------------------------- #
+	# Calculate difference between each frame and previous frame. Add this as a seperate column called diff.
+	# If the difference divided by the mean difference (16.67) is higher than 2 (a frame dropped) then ...
+	# ... add an empty frame that is 16.67ms away from the previous one. 
+	# ... Do this multiple times as needed.
+	# ---------------------------------------------------------------------------------------------------- #
+	new_list_of_files = [] 					# holder of all files after modifications
+	for list_of_dict in list_of_files:		# loop over each list of dictionary in the list of files
+		new_list_of_dict = []				# create a new list of dictionaries for each file
+		
+		for i in range(len(list_of_dict)): 	# loop over each dictionary (each frame) in the list 
+			if i == 0: 						# first frame: zero difference (no frame before it)
+				diff = 0					
+			else: 							# otherwise: calc time diff between current and previous frame
+				diff = int(list_of_dict[i][timestamp_column_name]) - int(list_of_dict[i-1][timestamp_column_name]) 
+
+			ratio = diff / 16.67			# this should return how many frames were dropped, approxamatly
+
+			# Here we deal with each dropped frame by adding a spece holder for each of them.
+			# If round(ratio) = 2 then diff might have been between 26-41.
+			# ... On average, difference is 16.67,
+			# ... thus, we need to add only one frame,
+			# ... which is equal to round(ratio) - 1.
+			# ... This is applicable for any round(ratio) >= 2,
+			# ... which is why we will loop over range(round(ratio)-1)
+			if round(ratio) >= 2:
+				for j in range(round(ratio)-1):
+					row = list_of_dict[i].copy()	# Copy current row from data_dict and modify it as dropped frame
+					row[timestamp_column_name] = np.uint64(list_of_dict[i-1][timestamp_column_name]) + (16.67*(j+1))
+					row['diff'] = ""
+					new_list_of_dict.append(row)	# Append the modified row into new_data_dict
+
+			# After adding dropped frames holders (if there was any)
+			list_of_dict[i]['diff'] = diff				# modify the current frame
+			new_list_of_dict.append(list_of_dict[i])	# and append it to new_data_dict
+		
+		new_list_of_files.append(new_list_of_dict) # Append the new list of dictionaries to the new list of files.
+	
+	
 	# for each file, find a frame corresponding to the first frame in the largest ts file.
 	starting_frames = []  # To hold the new starting frame of each file
-	for i, file in enumerate(list_of_files):
+	for i, list_of_dict in enumerate(new_list_of_files):
 		# If the current file is the one that started last, append 0 (its frames won't be shifted)
 		if i == order[-1]: 
 			starting_frames.append(0)
@@ -50,23 +92,25 @@ def main():
 		
 		# Otherwise, find the suitable corresponding frame by comparing each frame's timestamp with the pivot file timestamp
 		diff = np.inf
-		for frame in file:
+		for j, frame in enumerate(list_of_dict):
 			old_diff = diff
 			diff = first_ts[order[-1]] - int(frame[keys[1]])
 			if  diff <= 8 and diff < old_diff:
-				starting_frames.append(frame[keys[0]])
+				starting_frames.append(j)
 				break
-
 	print(starting_frames)
 
+
+
+		
 	# write the files again after ffa (first frame aligned)
 	for i, file_name in enumerate(file_names):
 		starting_frame = int(starting_frames[i])
-		new_data_dict = list_of_files[i][starting_frame:]
-		with open(file_name.replace('.csv', '_ffa.csv'), 'w') as csv_file: 
-			dict_writer = csv.DictWriter(csv_file, new_data_dict[-1].keys())
+		new_list_of_dict = new_list_of_files[i][starting_frame:]
+		with open(file_name.replace('.csv', '_diff.csv'), 'w') as csv_file: 
+			dict_writer = csv.DictWriter(csv_file, new_list_of_dict[-1].keys())
 			dict_writer.writeheader()
-			dict_writer.writerows(new_data_dict)
+			dict_writer.writerows(new_list_of_dict)
 
 
 
