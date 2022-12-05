@@ -70,7 +70,7 @@ def main():
 			# ... which is why we will loop over range(round(ratio)-1)
 			if round(ratio) >= 2:
 				for j in range(round(ratio)-1):
-					row = list_of_dict[i].copy()	# Copy current row from data_dict and modify it as dropped frame
+					row = list_of_dict[i].copy()	# Copy current list_of_dict row and modify it as a dropped frame
 					row[timestamp_column_name] = np.uint64(list_of_dict[i-1][timestamp_column_name]) + (16.67*(j+1))
 					row['diff'] = ""
 					new_list_of_dict.append(row)	# Append the modified row into new_data_dict
