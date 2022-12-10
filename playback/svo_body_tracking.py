@@ -17,20 +17,22 @@ def main():
     global paused   # A flag for pausing the video
     global cam      # Variable to hold ZED object
 
-    # Arg parse
-    if len(sys.argv) != 2:
-        print("Please specify path to .svo file.")
-        exit()
-    filepath = sys.argv[1]
-    print("Reading SVO file: {0} \n".format(filepath))
-
     # Init parameters
     init = sl.InitParameters(camera_resolution=sl.RESOLUTION.HD720,
                             svo_real_time_mode=True,
                             coordinate_units = sl.UNIT.MILLIMETER,
                             coordinate_system = sl.COORDINATE_SYSTEM.IMAGE,
                             depth_mode=sl.DEPTH_MODE.ULTRA)
-    init.set_from_svo_file(filepath)
+    
+        # Arg parse
+    if len(sys.argv) >= 2:
+        filepath = sys.argv[1]
+        init.set_from_svo_file(filepath)
+        print("Reading SVO file: {0} \n".format(filepath))
+        
+    
+    
+
 
     # Open the ZED camera
     status = cam.open(init)
