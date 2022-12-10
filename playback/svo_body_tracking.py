@@ -22,7 +22,7 @@ def main():
                             svo_real_time_mode=True,
                             coordinate_units = sl.UNIT.MILLIMETER,
                             coordinate_system = sl.COORDINATE_SYSTEM.IMAGE,
-                            depth_mode=sl.DEPTH_MODE.ULTRA)
+                            depth_mode=sl.DEPTH_MODE.ULTRA) # Choose among NEURAL, ULTRA, QUALITY, PERFORMANCE
     
         # Arg parse
     if len(sys.argv) >= 2:
@@ -50,7 +50,7 @@ def main():
     obj_param.enable_body_fitting = True            # Smooth skeleton move
     obj_param.enable_tracking = True                # Track people across images flow
     obj_param.image_sync = True                     # run detection for every Camera grab
-    obj_param.detection_model = sl.DETECTION_MODEL.HUMAN_BODY_FAST  # Object detection model
+    obj_param.detection_model = sl.DETECTION_MODEL.HUMAN_BODY_FAST  # Object detection model, choose among HUMAN_BODY_ACCURAT, HUMAN_BODY_MEDIUM, HUMAN_BODY_FAST
     obj_param.body_format = sl.BODY_FORMAT.POSE_18  # Choose the BODY_FORMAT you wish to use
     obj_param.prediction_timeout_s = 0.2            # Defalt. The time taken before change from present to searching
 
