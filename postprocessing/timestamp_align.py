@@ -9,14 +9,14 @@ def main():
 	print("Starting ...")
 	# Process command line args
 	argc = len(sys.argv)
-	file_names = []
+	filespaths = []
 	# Extract file names from args
 	for i in range(1, argc):
-		file_name = sys.argv[i]
-		if not os.path.isfile(file_name): 
-			print(f"[ERROR] Can't find file {file_name}\nPlease Enter a Correct Path")
+		filepath = sys.argv[i]
+		if not os.path.isfile(filepath): 
+			print(f"[ERROR] Can't find file {filepath}\nPlease Enter a Correct Path")
 			exit(1)
-		file_names.append(file_name)
+		filespaths.append(filepath)
 
 
 	# ---------------------------------------------------------------------------- #
@@ -26,7 +26,7 @@ def main():
 	# ---------------------------------------------------------------------------- #
 	list_of_files = []
 	first_ts = []  # Hold the timestamp of the first frame from each file
-	for f in file_names:
+	for f in filespaths:
 		print(f"Reading File {f}")
 		# Open CSV File 
 		with open(f, 'r') as csv_file:
@@ -100,14 +100,21 @@ def main():
 				break
 	print(starting_frames)
 
+	for i, filepath in enumerate(filespaths):
+		# File name (without path)
+		filename = os.path.basename(filepath)
+		# The name of the output file
+		newfilename = filename.replace('.csv', '_aligned.csv')
+		# The *parent* directory of the *parent* directory the file was in
+		basedire = os.path.dirname(os.path.dirname(filepath))
+		# Making a new directory to store output csv at
+		newdir = os.path.join(basedire, 'aligned')
+		if not os.path.exists(newdir):
+			os.mkdir(newdir)
 
-
-		
-	# write the files again after ffa (first frame aligned)
-	for i, file_name in enumerate(file_names):
 		starting_frame = int(starting_frames[i])
 		new_list_of_dict = new_list_of_files[i][starting_frame:]
-		with open(file_name.replace('.csv', '_diff.csv'), 'w') as csv_file: 
+		with open(os.path.join(newdir, newfilename), 'w') as csv_file: 
 			dict_writer = csv.DictWriter(csv_file, new_list_of_dict[-1].keys())
 			dict_writer.writeheader()
 			dict_writer.writerows(new_list_of_dict)

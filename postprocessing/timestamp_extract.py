@@ -1,4 +1,5 @@
 import sys
+import os
 import csv
 import pyzed.sl as sl
 from tkinter import *
@@ -59,8 +60,19 @@ def main():
 		# Closing camera
 		cam.close()
 
+		# File name (without path)
+		filename = os.path.basename(filepath)
+		# The name of the output file
+		newfilename = filename.replace('.svo', '_ts.csv')
+		# The directory in which input file is
+		basedire = os.path.dirname(filepath)
+		# Making a new directory to store output csv at
+		newdir = os.path.join(basedire, 'ts')
+		if not os.path.exists(newdir):
+			os.mkdir(newdir)
+
 		# Write csv file
-		with open(filepath.replace('.svo', '_timestamps.csv'), 'w') as csvfile:
+		with open(os.path.join(newdir, newfilename), 'w') as csvfile:
 			writer = csv.DictWriter(csvfile, fieldnames=['#', 'timestamp', 'dropped frames'])
 			writer.writeheader()
 			writer.writerows(out_data)
