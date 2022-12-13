@@ -98,7 +98,12 @@ def main():
 			if  diff <= 8 and diff < old_diff:
 				starting_frames.append(j)
 				break
-	print(starting_frames)
+	
+	# Find the least sized file, and extract the size to be applied to all files (so all output files will have same size)
+	sizes =[]
+	for i, list_of_dict in enumerate(new_list_of_files):
+		sizes.append(len(list_of_dict)-starting_frames[i])
+	least_size = np.min(sizes)
 
 	for i, filepath in enumerate(filespaths):
 		# File name (without path)
@@ -112,8 +117,9 @@ def main():
 		if not os.path.exists(newdir):
 			os.mkdir(newdir)
 
+		# Writting output file
 		starting_frame = int(starting_frames[i])
-		new_list_of_dict = new_list_of_files[i][starting_frame:]
+		new_list_of_dict = new_list_of_files[i][starting_frame:starting_frame+least_size] # New starting and ending point of the file
 		with open(os.path.join(newdir, newfilename), 'w') as csv_file: 
 			dict_writer = csv.DictWriter(csv_file, new_list_of_dict[-1].keys())
 			dict_writer.writeheader()
