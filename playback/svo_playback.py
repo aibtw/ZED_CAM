@@ -8,10 +8,10 @@ paused = False
 cam = sl.Camera()
 
 def main():
-    global paused
-    global cam
-
     print("\nSTARTING ...\n")
+
+    global paused   # A flag for pausing the video
+    global cam      # Variable to hold ZED object
 
     # Arg parse
     if len(sys.argv) != 2:
@@ -76,7 +76,7 @@ def main():
             key = cv2.waitKey(1)
 
             # Decide what to do with the received key
-            svo_controls(key) 
+            svo_controls(key, mat) 
         else:
             key = cv2.waitKey(1)
 
@@ -87,7 +87,7 @@ def main():
     print("\nFINISH")
 
 
-def svo_controls(key):
+def svo_controls(key, mat):
     global paused
     global cam
     
@@ -118,6 +118,16 @@ def svo_controls(key):
         b=Button(master, text='GO', width = 10, command=callback)
         b.pack()
         mainloop()
+    
+    # Save image
+    if key == 115:
+        img = sl.ERROR_CODE.FAILURE
+        while img != sl.ERROR_CODE.SUCCESS:
+            filepath = input("Enter filepath name: ")
+            img = mat.write(filepath)
+            print("Saving image : {0}".format(repr(img)))
+            if img == sl.ERROR_CODE.SUCCESS:
+                break
 
 
 def print_camera_information(cam):
