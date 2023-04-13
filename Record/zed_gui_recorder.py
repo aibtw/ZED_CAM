@@ -38,14 +38,14 @@ def on_close():
 
 
 # ========== Recording Function ========== #
-def rec_loop(status, runtime_params, rec_path):
+def rec_loop(status, runtime_params, rec_path, usrid):
 	global zed
 	global is_recording
 
 	# Recording Parameters
 	print("\n[INFO] SETTING RECORDING PARAMETERS")
 	dt=datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
-	rec_path = os.path.join(rec_path, dt+'.svo')
+	rec_path = os.path.join(rec_path, str(usrid.get())+"_"+dt+'.svo')
 	print("[INFO] RECORDING TO: ", rec_path)
 	rec_params = sl.RecordingParameters(rec_path, sl.SVO_COMPRESSION_MODE.H265)
 	
@@ -99,6 +99,8 @@ def main():
 	root = tk.Tk()
 	status = tk.StringVar()
 	status.set("Recording Stopped")
+	usrid=tk.IntVar()
+	usrid.set(-1)
 
 	th=None  # Thread object holder
 
@@ -108,9 +110,12 @@ def main():
 		if is_recording:
 			print("Recordings Locked!")
 			return
+		if usrid.get() < 0:
+			print("Please provide correcut user id")
+			return
 		is_recording = True
 
-		th=threading.Thread(target=rec_loop, args=(status,runtime_params,rec_path,))
+		th=threading.Thread(target=rec_loop, args=(status,runtime_params,rec_path,usrid))
 		th.start()
 		
 	# Action item for stop recording button
@@ -126,14 +131,40 @@ def main():
 		except:
 			return
 	
-	frame = tk.Frame(master=root, width = 200, height=200)
-	frame.pack(fill=tk.X, expand=False, side=tk.TOP)
-	start_btn = tk.Button(master=frame, text="Start Recording", command=start_recording)
-	start_btn.grid(row=1, column=1)
-	stop_btn = tk.Button(master=frame, text="Stop Recording", command=stop_recording)
-	stop_btn.grid(row=1, column=2)
-	status_lbl = tk.Label(master=frame, textvariable=status)
-	status_lbl.grid(row=2, column=1)
+	# Read User id input
+	def conf_id():
+		inp = id_ent.get()
+		try:
+			usrid.set(int(inp))
+		except ValueError:
+			print("Please enter an integer")
+
+	frm_main = tk.Frame(master=root, width = 500, height=500)
+	frm_main.pack(fill=tk.X, expand=False, side=tk.TOP)
+	frm_main.columnconfigure([i for i in range(4)], weight=1, minsize=75)
+	frm_main.rowconfigure([i for i in range(4)], weight=1, minsize=75)
+	
+	id_lbl = tk.Label(master=frm_main, text="Enter your phone number")
+	id_lbl.grid(row=0, column=0, padx=(15,0), pady=(15,15), sticky="E")
+	id_ent = tk.Entry(master=frm_main)
+	id_ent.grid(row=0, column=1, columnspan=2, padx=(15,0), pady=(15,15), sticky="EW")
+	conf_btn = tk.Button(master=frm_main, text="Confirm", command=conf_id)
+	conf_btn.grid(row=0, column=3, padx=(15,15), pady=(15,15), sticky="W")
+	
+	curid_lbl = tk.Label(master=frm_main, text="Current User: ")
+	curid_lbl.grid(row=1, column=0, padx=(15,0), pady=(15,15), sticky="NSE")
+	conf_curid_lbl = tk.Label(master=frm_main, textvariable= usrid)
+	conf_curid_lbl.grid(row=1, column=1, columnspan=3, padx=(15,15), pady=(15,15), sticky="NSW")
+
+
+	start_btn = tk.Button(master=frm_main, text="Start Recording", command=start_recording)
+	start_btn.grid(row=3, column=1, padx=(15,0), sticky='EW')
+	stop_btn = tk.Button(master=frm_main, text="Stop Recording", command=stop_recording)
+	stop_btn.grid(row=3, column=2,padx=(0,15), sticky='EW')
+	
+	status_lbl = tk.Label(master=frm_main, textvariable=status)
+	status_lbl.grid(row=4, column=0, columnspan=4, padx=(15,15), pady=(15,15), sticky="NSEW")
+	
 	root.protocol("WM_DELETE_WINDOW", on_close)
 	root.mainloop()
 
