@@ -19,26 +19,24 @@ is_recording = False
 # ========== Ctrl-C Handler ========== #
 def handler(sig, stack_frame):
 	print("\n\nReceived Exit Signal!\n")
-	global zed
-	global is_recording
-
-	# Close ZED
-	is_recording=False
-	time.sleep(0.5)
-	zed.disable_recording()
-	zed.close()
-	
-	sys.exit(0)
+	global zed					# Camera object
+	global is_recording			# Recording condition (Set false to stop any thread recording)
+	is_recording=False  		# Stop any threads that are recording
+	time.sleep(0.5)				# Wait for the thread. (this will suffice, No need for a thread.join())
+	zed.disable_recording()		# Disable recording
+	zed.close()					# Close the camera
+	sys.exit(0)					# Exit
 
 
+# ========== Close-Button Handler ========== #
 def on_close():
 	ans = messagebox.askyesno("Close", message="Are you sure you wish to exit?")
-	if ans:
-		handler(None, None)
+	if ans:						# If closing is confirmed
+		handler(None, None)  	# Use the same Ctrl-C handler, no need to rewrite the code
 
 
 # ========== Recording Function ========== #
-def rec_loop(status, runtime_params, rec_path, usrid):
+def rec_loop(status, runtime_params, rec_path, usrid, fps):
 	global zed
 	global is_recording
 
@@ -60,6 +58,7 @@ def rec_loop(status, runtime_params, rec_path, usrid):
 	status.set("Recording Started")
 	while is_recording:
 		zed.grab(runtime_params)
+		# fps.set(int(zed.get_current_fps()))
 
 
 def main():
@@ -101,8 +100,11 @@ def main():
 	status.set("Recording Stopped")
 	usrid=tk.IntVar()
 	usrid.set(-1)
-
+	fps=tk.IntVar()
+	fps.set(0)
+	
 	th=None  # Thread object holder
+	recstat_lbl=None
 
 	# Action item for start recording button
 	def start_recording():
@@ -114,8 +116,8 @@ def main():
 			print("Please provide correcut user id")
 			return
 		is_recording = True
-
-		th=threading.Thread(target=rec_loop, args=(status,runtime_params,rec_path,usrid))
+		recstat_lbl.configure(bg="#25be46")  # Update status label color
+		th=threading.Thread(target=rec_loop, args=(status,runtime_params,rec_path,usrid,fps))
 		th.start()
 		
 	# Action item for stop recording button
@@ -129,8 +131,10 @@ def main():
 		try:
 			th.join()
 		except:
+			fps.set(0)
+			recstat_lbl.configure(bg="#de5e5e")  # Update status label
 			return
-	
+
 	# Read User id input
 	def conf_id():
 		inp = id_ent.get()
@@ -142,29 +146,37 @@ def main():
 	frm_main = tk.Frame(master=root, width = 500, height=500)
 	frm_main.pack(fill=tk.X, expand=False, side=tk.TOP)
 	frm_main.columnconfigure([i for i in range(4)], weight=1, minsize=75)
-	frm_main.rowconfigure([i for i in range(4)], weight=1, minsize=75)
+	frm_main.rowconfigure([i for i in range(10)], weight=1, minsize=75)
 	
-	id_lbl = tk.Label(master=frm_main, text="Enter your phone number")
+	id_lbl = tk.Label(master=frm_main, text="Enter your phone number", font=('Times New Roman', 14))
 	id_lbl.grid(row=0, column=0, padx=(15,0), pady=(15,15), sticky="E")
-	id_ent = tk.Entry(master=frm_main)
+	id_ent = tk.Entry(master=frm_main, font=('Times New Roman', 14))
 	id_ent.grid(row=0, column=1, columnspan=2, padx=(15,0), pady=(15,15), sticky="EW")
-	conf_btn = tk.Button(master=frm_main, text="Confirm", command=conf_id)
+	conf_btn = tk.Button(master=frm_main, text="Confirm", command=conf_id, font=('Times New Roman', 14))
 	conf_btn.grid(row=0, column=3, padx=(15,15), pady=(15,15), sticky="W")
 	
-	curid_lbl = tk.Label(master=frm_main, text="Current User: ")
+	curid_lbl = tk.Label(master=frm_main, text="Current User: ", font=('Times New Roman', 14))
 	curid_lbl.grid(row=1, column=0, padx=(15,0), pady=(15,15), sticky="NSE")
-	conf_curid_lbl = tk.Label(master=frm_main, textvariable= usrid)
+	conf_curid_lbl = tk.Label(master=frm_main, textvariable= usrid, font=('Times New Roman', 14))
 	conf_curid_lbl.grid(row=1, column=1, columnspan=3, padx=(15,15), pady=(15,15), sticky="NSW")
 
-
-	start_btn = tk.Button(master=frm_main, text="Start Recording", command=start_recording)
+	ctrl_lbl = tk.Label(master=frm_main, text="Controls: ", font=('Times New Roman', 14))
+	ctrl_lbl.grid(row=3, column=0, padx=(15,0), sticky="NSE")
+	start_btn = tk.Button(master=frm_main, text="Start Recording", font=('Times New Roman', 14), command=start_recording)
 	start_btn.grid(row=3, column=1, padx=(15,0), sticky='EW')
-	stop_btn = tk.Button(master=frm_main, text="Stop Recording", command=stop_recording)
+	stop_btn = tk.Button(master=frm_main, text="Stop Recording", font=('Times New Roman', 14), command=stop_recording)
 	stop_btn.grid(row=3, column=2,padx=(0,15), sticky='EW')
 	
-	status_lbl = tk.Label(master=frm_main, textvariable=status)
-	status_lbl.grid(row=4, column=0, columnspan=4, padx=(15,15), pady=(15,15), sticky="NSEW")
+	status_lbl = tk.Label(master=frm_main, text="Status", font=('Times New Roman', 14))
+	status_lbl.grid(row=4, column=0, padx=(15,0), pady=(15,15), sticky="NSE")
+	recstat_lbl = tk.Label(master=frm_main, textvariable=status, font=('Times New Roman', 14), bg="#de5e5e")
+	recstat_lbl.grid(row=4, column=1, columnspan=3, padx=(15,15), pady=(15,15), sticky="NSW")
 	
+	# fps_lbl = tk.Label(master=frm_main, text="FPS: ", font=('Times New Roman', 14))
+	# fps_lbl.grid(row=5, column=0, columnspan=4, padx=(15,15), pady=(15,15), sticky="NSEW")
+	# curfps_lbl = tk.Label(master=frm_main, textvariable=fps, font=('Times New Roman', 14))
+	# curfps_lbl.grid(row=5, column=0, columnspan=4, padx=(15,15), pady=(15,15), sticky="NSEW")
+
 	root.protocol("WM_DELETE_WINDOW", on_close)
 	root.mainloop()
 
