@@ -35,7 +35,7 @@ def main():
 			list_of_files.append(file_data)		# ... and append it to the list of files
 			keys = list(file_data[-1].keys())  	# All column names of the current csv file
 			timestamp_column_name = keys[1]    	# The name of the second column (contains timestamps)
-			first_ts.append(int(file_data[0][timestamp_column_name])) # retrieve the timestamp of the first frame
+			first_ts.append(int(float(file_data[0][timestamp_column_name]))) # retrieve the timestamp of the first frame
 
 	# Order the files in terms of their starting point (which file started recording first)
 	order = np.argsort(first_ts) # ascending order
@@ -57,7 +57,7 @@ def main():
 			if i == 0: 						# first frame: zero difference (no frame before it)
 				diff = 0					
 			else: 							# otherwise: calc time diff between current and previous frame
-				diff = int(list_of_dict[i][timestamp_column_name]) - int(list_of_dict[i-1][timestamp_column_name]) 
+				diff = int(float(list_of_dict[i][timestamp_column_name])) - int(float(list_of_dict[i-1][timestamp_column_name])) 
 
 			ratio = diff / 16.67			# this should return how many frames were dropped, approxamatly
 
@@ -71,7 +71,7 @@ def main():
 			if round(ratio) >= 2:
 				for j in range(round(ratio)-1):
 					row = list_of_dict[i].copy()	# Copy current list_of_dict row and modify it as a dropped frame
-					row[timestamp_column_name] = np.uint64(list_of_dict[i-1][timestamp_column_name]) + (16.67*(j+1))
+					row[timestamp_column_name] = np.float128(list_of_dict[i-1][timestamp_column_name]) + (16.67*(j+1))
 					row['diff'] = ""
 					new_list_of_dict.append(row)	# Append the modified row into new_data_dict
 
@@ -121,6 +121,7 @@ def main():
 		starting_frame = int(starting_frames[i])
 		new_list_of_dict = new_list_of_files[i][starting_frame:starting_frame+least_size] # New starting and ending point of the file
 		with open(os.path.join(newdir, newfilename), 'w') as csv_file: 
+			print(f'Writing {os.path.join(newdir, newfilename)}')
 			dict_writer = csv.DictWriter(csv_file, new_list_of_dict[-1].keys())
 			dict_writer.writeheader()
 			dict_writer.writerows(new_list_of_dict)
