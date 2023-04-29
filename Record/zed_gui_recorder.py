@@ -14,7 +14,7 @@ from tkinter import messagebox
 # ========== Global Variables ========== # 
 zed = sl.Camera()  # Holder for Cameras	
 is_recording = False
-
+aborted = False
 
 # ========== Ctrl-C Handler ========== #
 def handler(sig, stack_frame):
@@ -39,6 +39,7 @@ def on_close():
 def rec_loop(status, runtime_params, rec_path, usrid, fps):
 	global zed
 	global is_recording
+	global aborted
 
 	# Recording Parameters
 	print("\n[INFO] SETTING RECORDING PARAMETERS")
@@ -59,11 +60,19 @@ def rec_loop(status, runtime_params, rec_path, usrid, fps):
 	while is_recording:
 		zed.grab(runtime_params)
 		# fps.set(int(zed.get_current_fps()))
-
+	if aborted: 
+		os.remove(rec_path)
+		print("[WARNING] Recording Aborted and file was deleted")
+	else:
+		print("[WARNING] Recording Stopped")
 
 def main():
 	global zed
 	global is_recording
+	global aborted
+
+	# Set default rec_path
+	rec_path = r"/home/felemban/Documents"
 
 	# arg-parse and output path setting
 	print("\n[INFO] SETTING PATH")
@@ -137,8 +146,10 @@ def main():
 
 	# Stop record and delete the recorded files
 	def abort_recording():
+		global aborted
+		aborted = True  # Set aborted flag. This will cause rec func to delete the output file
 		stop_recording()
-		# TODO: Delete the recorded file
+		aborted = False # Reset aborted flag 
 
 	# Read User id input
 	def conf_id():
