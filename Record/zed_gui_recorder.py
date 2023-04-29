@@ -12,44 +12,84 @@ from tkinter import messagebox
 
 
 # ========== Global Variables ========== # 
-zed = sl.Camera()  # Holder for Cameras	
-is_recording = False
-aborted = False
+zed = sl.Camera()  		# Camera object	
+is_recording = False	# Recording condition (Set false to stop any thread recording)
+aborted = False			# Recording abortion indicator
 
-# ========== Ctrl-C Handler ========== #
+
+# =========== Ctrl-C Handler =========== #
 def handler(sig, stack_frame):
+	"""
+		This function handles the Ctrl-C signal when received.
+
+		Also, this function is called when close button is
+		used, from within the on_close() function.
+	"""
+
 	print("\n\nReceived Exit Signal!\n")
 	global zed					# Camera object
 	global is_recording			# Recording condition (Set false to stop any thread recording)
 	is_recording=False  		# Stop any threads that are recording
-	time.sleep(0.5)				# Wait for the thread. (this will suffice, No need for a thread.join())
+	time.sleep(0.5)				# Wait for the thread. (no need for a thread.join())
 	zed.disable_recording()		# Disable recording
 	zed.close()					# Close the camera
 	sys.exit(0)					# Exit
 
 
-# ========== Close-Button Handler ========== #
+# ======== Close-Button Handler ======== #
 def on_close():
+	"""
+		This function handles the the close button.
+
+		It calls the handler() function which disables
+		recording and exits.
+	"""
+
+	# Show a confirmation Yes/No message box
 	ans = messagebox.askyesno("Close", message="Are you sure you wish to exit?")
 	if ans:						# If closing is confirmed
 		handler(None, None)  	# Use the same Ctrl-C handler, no need to rewrite the code
 
 
-# ========== Recording Function ========== #
+# ========= Recording Function ========= #
 def rec_loop(status, runtime_params, rec_path, usrid, fps):
-	global zed
-	global is_recording
-	global aborted
+	"""
+		This function manages video recording. 
+		
+		whenever called, it sets a new recording path,
+		then update recording parameters, and enable
+		recording. Finally recording is started.
+		The function is intended to be used as a thread.
 
-	# Recording Parameters
+		Parameters
+		----------
+		status: tk.StringVar()
+			variable to store recording status for GUI
+		runtime_params: sl.RuntimeParameters
+			runtime parameters of the ZED camera
+		rec_path: str
+			Recording directory. must exists.
+		usrid: int
+			user id provided from GUI to use in file name.
+		fps: int
+			camera FPS
+	"""
+
+	global zed 			 # Camera object
+	global is_recording  # Recording condition (Set false to stop any thread recording)
+	global aborted  	 # Recording abortion indicator
+
 	print("\n[INFO] SETTING RECORDING PARAMETERS")
-	dt=datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
-	rec_path = os.path.join(rec_path, str(usrid.get())+"_"+dt+'.svo')
-	print("[INFO] RECORDING TO: ", rec_path)
+	# Current date & time
+	dt=datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")  
+	# Recording path
+	rec_path = os.path.join(rec_path, str(usrid.get())+"_"+dt+'.svo')  
+	print("[INFO] RECORDING TO: ", rec_path) 
+	# Recording Parameters
 	rec_params = sl.RecordingParameters(rec_path, sl.SVO_COMPRESSION_MODE.H265)
 	
 	# Enable Recording
-	print("\n[INFO] ENABLING RECORDING")
+	print("\n[REC] ENABLING RECORDING")
 	err = zed.enable_recording(rec_params)
 	if err != sl.ERROR_CODE.SUCCESS:
 		print(repr(err))
@@ -59,20 +99,28 @@ def rec_loop(status, runtime_params, rec_path, usrid, fps):
 	status.set("Recording Started")
 	while is_recording:
 		zed.grab(runtime_params)
-		# fps.set(int(zed.get_current_fps()))
+	
+	# When the user asks to stop recording
 	if aborted: 
+		# If aborted, delete the file
 		os.remove(rec_path)
-		print("[WARNING] Recording Aborted and file was deleted")
+		print("[REC] Recording Aborted and file was deleted")
 	else:
-		print("[WARNING] Recording Stopped")
+		print("[REC] Recording Stopped")
+
+	# Either way, disable recording and print number of dropped frames
+	zed.disable_recording()
+	print("[INFO] DROPPED FRAMES: ", zed.get_frame_dropped_count())
+	
 
 def main():
-	global zed
-	global is_recording
-	global aborted
+	global zed  		 # Camera object
+	global is_recording  # Recording condition (Set false to stop any thread recording)
+	global aborted  	 # Recording abortion indicator
 
 	# Set default rec_path
-	rec_path = r"/home/felemban/Documents"
+	# rec_path = r"/home/felemban/Documents"
+	rec_path = r"/media/felemban/Extreme SSD"
 
 	# arg-parse and output path setting
 	print("\n[INFO] SETTING PATH")
@@ -92,64 +140,95 @@ def main():
 			camera_fps=60,
 			depth_mode=sl.DEPTH_MODE.NONE)
 	
-	# Open the camera
-	print("\n[INFO] OPENING CAMERA")	
-	st = zed.open(init_params)
-	if st != sl.ERROR_CODE.SUCCESS:
-		print(st)
-		exit(1)
+	# # Open the camera
+	# print("\n[INFO] OPENING CAMERA")	
+	# st = zed.open(init_params)
+	# if st != sl.ERROR_CODE.SUCCESS:
+	# 	print(st)
+	# 	exit(1)
 	
 	# Runtime Parameter
 	print("\n[INFO] SETTING RUNTIME PARAMETERS")
 	runtime_params = sl.RuntimeParameters(enable_depth=False)
 
-	# TK GUI Section
+	# ========================= TK GUI Section ========================= #
 	root = tk.Tk()
-	status = tk.StringVar()
-	status.set("Recording Stopped")
-	usrid=tk.IntVar()
-	usrid.set(-1)
-	fps=tk.IntVar()
-	fps.set(0)
+	status = tk.StringVar()			 # Store the status of recording
+	status.set("Recording Stopped")	 # Initially set to stopped
+	usrid=tk.IntVar()				 # Store the user ID
+	usrid.set(-1)					 # Initially set to -1
+	fps=tk.IntVar()					 # Store current FPS
+	fps.set(0)						 # initially set to 0
 	
-	th=None  # Thread object holder
-	recstat_lbl=None
+	th=None  			# Thread object holder
+	recstat_lbl=None	# Recording status label object holder. 
+						# Initialized here to avoid (variable mentioned
+						# before initializing) errors when excuting
+						# the start_recording function
+
 
 	# Action item for start recording button
 	def start_recording():
+		global zed
 		global is_recording
+
+		# If recording is already started
 		if is_recording:
 			print("Recordings Locked!")
 			return
+		# If user didn't provide an id
 		if usrid.get() < 0:
 			print("Please provide correcut user id")
 			return
+		# If the camera is not open, then open it.
+		if not zed.is_opened():
+			print("Opening camera")
+			st = zed.open(init_params)
+			if st != sl.ERROR_CODE.SUCCESS:
+				print(st)
+				exit(1)
+		
+		# Set recording flag to True
 		is_recording = True
-		recstat_lbl.configure(bg="#25be46")  # Update status label color
+		# Update status label color
+		recstat_lbl.configure(bg="#25be46")  
+		# Start the recording thread
 		th=threading.Thread(target=rec_loop, args=(status,runtime_params,rec_path,usrid,fps))
 		th.start()
 		
+
 	# Action item for stop recording button
 	def stop_recording():
+		global zed
 		global is_recording
+		# If recording is already stopped
 		if is_recording == False:
 			print("Recording already stopped")
 			return
+		# Reset the recording flag
 		is_recording = False
+		# Update the recording status label  
 		status.set("Recording Stopped")
+		# Wait for the thread
 		try:
 			th.join()
 		except:
-			fps.set(0)
-			recstat_lbl.configure(bg="#de5e5e")  # Update status label
+			# fps.set(0)
+			# Update status label
+			recstat_lbl.configure(bg="#de5e5e")  
+			# Close the camera
+			zed.close()
 			return
+
 
 	# Stop record and delete the recorded files
 	def abort_recording():
 		global aborted
-		aborted = True  # Set aborted flag. This will cause rec func to delete the output file
+		# Set aborted flag. 
+		aborted = True  # This will cause rec func to delete the output file
 		stop_recording()
 		aborted = False # Reset aborted flag 
+
 
 	# Read User id input
 	def conf_id():
