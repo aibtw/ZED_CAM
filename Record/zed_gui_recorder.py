@@ -135,6 +135,11 @@ def main():
 			recstat_lbl.configure(bg="#de5e5e")  # Update status label
 			return
 
+	# Stop record and delete the recorded files
+	def abort_recording():
+		stop_recording()
+		# TODO: Delete the recorded file
+
 	# Read User id input
 	def conf_id():
 		inp = id_ent.get()
@@ -165,8 +170,10 @@ def main():
 	start_btn = tk.Button(master=frm_main, text="Start Recording", font=('Times New Roman', 14), command=start_recording)
 	start_btn.grid(row=3, column=1, padx=(15,0), sticky='EW')
 	stop_btn = tk.Button(master=frm_main, text="Stop Recording", font=('Times New Roman', 14), command=stop_recording)
-	stop_btn.grid(row=3, column=2,padx=(0,15), sticky='EW')
-	
+	stop_btn.grid(row=3, column=2,padx=(0,0), sticky='EW')
+	abort_btn = tk.Button(master=frm_main, text="Abort Recording", font=('Times New Roman', 14), command=abort_recording)
+	abort_btn.grid(row=3, column=3,padx=(0,15), sticky='EW')
+
 	status_lbl = tk.Label(master=frm_main, text="Status", font=('Times New Roman', 14))
 	status_lbl.grid(row=4, column=0, padx=(15,0), pady=(15,15), sticky="NSE")
 	recstat_lbl = tk.Label(master=frm_main, textvariable=status, font=('Times New Roman', 14), bg="#de5e5e")

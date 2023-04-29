@@ -2,7 +2,6 @@ import sys
 import os
 import csv
 import pyzed.sl as sl
-from tkinter import *
 
 
 def main():
@@ -72,7 +71,7 @@ def main():
 			os.mkdir(newdir)
 
 		# Write csv file
-		with open(os.path.join(newdir, newfilename), 'w') as csvfile:
+		with open(os.path.join(newdir, newfilename), 'w', newline='') as csvfile:
 			writer = csv.DictWriter(csvfile, fieldnames=['#', 'timestamp', 'dropped frames'])
 			writer.writeheader()
 			writer.writerows(out_data)
