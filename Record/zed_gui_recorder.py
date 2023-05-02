@@ -120,7 +120,8 @@ def main():
 
 	# Set default rec_path
 	# rec_path = r"/home/felemban/Documents"
-	rec_path = r"/media/felemban/Extreme SSD"
+	# rec_path = r"/media/felemban/Extreme SSD"
+	rec_path = r"C:\Users\English\Documents\ZED"
 
 	# arg-parse and output path setting
 	print("\n[INFO] SETTING PATH")
@@ -139,14 +140,7 @@ def main():
 			camera_resolution=sl.RESOLUTION.HD720,
 			camera_fps=60,
 			depth_mode=sl.DEPTH_MODE.NONE)
-	
-	# # Open the camera
-	# print("\n[INFO] OPENING CAMERA")	
-	# st = zed.open(init_params)
-	# if st != sl.ERROR_CODE.SUCCESS:
-	# 	print(st)
-	# 	exit(1)
-	
+		
 	# Runtime Parameter
 	print("\n[INFO] SETTING RUNTIME PARAMETERS")
 	runtime_params = sl.RuntimeParameters(enable_depth=False)
@@ -160,6 +154,12 @@ def main():
 	fps=tk.IntVar()					 # Store current FPS
 	fps.set(0)						 # initially set to 0
 	
+	usr_btn_stat = [tk.StringVar(), tk.StringVar()]
+	[btn_stat.set('Start') for btn_stat in usr_btn_stat]
+
+	active_usrs = tk.IntVar()
+	active_usrs.set(0)
+
 	th=None  			# Thread object holder
 	recstat_lbl=None	# Recording status label object holder. 
 						# Initialized here to avoid (variable mentioned
@@ -176,17 +176,20 @@ def main():
 		if is_recording:
 			print("Recordings Locked!")
 			return
-		# If user didn't provide an id
-		if usrid.get() < 0:
-			print("Please provide correcut user id")
-			return
+		
+		# # If user didn't provide an id
+		# if usrid.get() < 0:
+		# 	print("Please provide correcut user id")
+		# 	messagebox.showerror("Error", "Please provide correcut user id")
+		# 	return
+		
 		# If the camera is not open, then open it.
 		if not zed.is_opened():
 			print("Opening camera")
 			st = zed.open(init_params)
 			if st != sl.ERROR_CODE.SUCCESS:
 				print(st)
-				exit(1)
+				return False
 		
 		# Set recording flag to True
 		is_recording = True
@@ -205,6 +208,12 @@ def main():
 		if is_recording == False:
 			print("Recording already stopped")
 			return
+		
+		# Check if there is still a user using the interface
+		if active_usrs.get() != 0:
+			print("A user is still engaged. Wait for them.")
+			return
+		
 		# Reset the recording flag
 		is_recording = False
 		# Update the recording status label  
@@ -231,29 +240,55 @@ def main():
 
 
 	# Read User id input
-	def conf_id():
-		inp = id_ent.get()
+	def usr_action(id_ent, usr):
+		global zed
+		
+		ID = id_ent.get()
 		try:
-			usrid.set(int(inp))
+			usrid.set(int(ID))
+			if usrid.get() < 0: raise ValueError
 		except ValueError:
-			print("Please enter an integer")
+			print("Please provide correct user id")
+			messagebox.showerror("Error", "Please provide correct user id")
+			return
+		
+		if usr_btn_stat[usr].get() == "Start":
+			usr_btn_stat[usr].set("Stop")
+			if start_recording() != False:  # Camera opened successfully
+				active_usrs.set(active_usrs.get() + 1)
+			
+		elif usr_btn_stat[usr].get() == "Stop":
+			usr_btn_stat[usr].set("Start")
+			active_usrs.set(active_usrs.get() - 1)
+			stop_recording()
+		
 
+	# Creating Main Frame
 	frm_main = tk.Frame(master=root, width = 500, height=500)
 	frm_main.pack(fill=tk.X, expand=False, side=tk.TOP)
+	# Configuring number of rows and columns in the grid
 	frm_main.columnconfigure([i for i in range(4)], weight=1, minsize=75)
 	frm_main.rowconfigure([i for i in range(10)], weight=1, minsize=75)
-	
-	id_lbl = tk.Label(master=frm_main, text="Enter your phone number", font=('Times New Roman', 14))
+	# Label that reads (Enter your number) for each of the two users
+	id_lbl = tk.Label(master=frm_main, text="Enter your phone number", font=('Times New Roman', 14), bg="#A6DDFD")
 	id_lbl.grid(row=0, column=0, padx=(15,0), pady=(15,15), sticky="E")
-	id_ent = tk.Entry(master=frm_main, font=('Times New Roman', 14))
-	id_ent.grid(row=0, column=1, columnspan=2, padx=(15,0), pady=(15,15), sticky="EW")
-	conf_btn = tk.Button(master=frm_main, text="Confirm", command=conf_id, font=('Times New Roman', 14))
-	conf_btn.grid(row=0, column=3, padx=(15,15), pady=(15,15), sticky="W")
+	id_lbl = tk.Label(master=frm_main, text="Enter your phone number", font=('Times New Roman', 14), bg="#B9FFBB")
+	id_lbl.grid(row=1, column=0, padx=(15,0), pady=(15,15), sticky="E")
+	# Entry that receives the ID or number from each of the two users
+	id_ent_0 = tk.Entry(master=frm_main, font=('Times New Roman', 14), bg="#A6DDFD")
+	id_ent_0.grid(row=0, column=1, columnspan=1, padx=(15,0), pady=(15,15), sticky="EW")
+	id_ent_1 = tk.Entry(master=frm_main, font=('Times New Roman', 14), bg="#B9FFBB")
+	id_ent_1.grid(row=1, column=1, columnspan=1, padx=(15,0), pady=(15,15), sticky="EW")
+	# Button for confirming the entered ID or number for each of the two users
+	st_btn_0 = tk.Button(master=frm_main, textvariable=usr_btn_stat[0], command=lambda: usr_action(id_ent_0, 0), font=('Times New Roman', 14))
+	st_btn_0.grid(row=0, column=2, padx=(15,15), pady=(15,15), sticky="W")
+	st_btn_1 = tk.Button(master=frm_main, textvariable=usr_btn_stat[1], command=lambda: usr_action(id_ent_1, 1), font=('Times New Roman', 14))
+	st_btn_1.grid(row=1, column=2, padx=(15,15), pady=(15,15), sticky="W")
 	
 	curid_lbl = tk.Label(master=frm_main, text="Current User: ", font=('Times New Roman', 14))
-	curid_lbl.grid(row=1, column=0, padx=(15,0), pady=(15,15), sticky="NSE")
+	curid_lbl.grid(row=2, column=0, padx=(15,0), pady=(15,15), sticky="NSE")
 	conf_curid_lbl = tk.Label(master=frm_main, textvariable= usrid, font=('Times New Roman', 14))
-	conf_curid_lbl.grid(row=1, column=1, columnspan=3, padx=(15,15), pady=(15,15), sticky="NSW")
+	conf_curid_lbl.grid(row=2, column=1, columnspan=3, padx=(15,15), pady=(15,15), sticky="NSW")
 
 	ctrl_lbl = tk.Label(master=frm_main, text="Controls: ", font=('Times New Roman', 14))
 	ctrl_lbl.grid(row=3, column=0, padx=(15,0), sticky="NSE")
