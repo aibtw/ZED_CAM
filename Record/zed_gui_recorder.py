@@ -144,8 +144,8 @@ def main():
 
 	# Metadata structure initialization
 	metadata_fname = ''
-	metadata = [{"ID": [], "Position": [], "StartTime": [],"EndTime": []},
-	      		{"ID": [], "Position": [], "StartTime": [],"EndTime": []}]
+	metadata = [{"ID": [], "Position": [], "StartTime": [],"EndTime": [], "Marked": []},
+	      		{"ID": [], "Position": [], "StartTime": [],"EndTime": [], "Marked": []}]
 	
 	
 	# ========================= TK GUI Section ========================= #
@@ -165,6 +165,7 @@ def main():
 	active_usrs = tk.IntVar()	# Store number of active users (0, 1, 2)
 	active_usrs.set(0)			# Initialize to 0
 
+	mark=[False, False]
 	th=None  			# Thread object holder
 	recstat_lbl=None	# Recording status label object holder. 
 						# Initialized here to avoid (variable mentioned
@@ -248,10 +249,11 @@ def main():
 
 
 	# Read User id input
-	def usr_action(id_ent, usr):
+	def usr_action(id_ent, usr, pressed_mark=False):
 		global zed
 		nonlocal metadata
 		nonlocal metadata_fname
+		nonlocal mark
 		
 		# Get the ID of the current user
 		ID = id_ent.get()
@@ -264,6 +266,11 @@ def main():
 			messagebox.showerror("Error", "Please provide correct user id")
 			return
 		
+		# If trying to report a recording without starting to record
+		if pressed_mark and usr_btn_stat[usr].get() == "Start":
+			print("Can't mark low quality when recording not started")
+			return
+
 		# If the user pressed start
 		if usr_btn_stat[usr].get() == "Start":
 			# Update the button text to stop (and its functionality changes with it)
@@ -289,12 +296,17 @@ def main():
 		
 		# If the user pressed stop
 		elif usr_btn_stat[usr].get() == "Stop":
+			# Check for pressing the mark and report button
+			if pressed_mark: mark[usr] = not mark[usr]
 			# Update the button text to start (and its functionality changes with it)
 			usr_btn_stat[usr].set("Start")
 			# Decrement active users
 			active_usrs.set(active_usrs.get() - 1)
 			# update metadata
 			metadata[usr]["EndTime"].append(stop_recording())
+			metadata[usr]["Marked"].append(mark[usr])
+			# Reset the mark of this position for the next user
+			mark[usr] = False
 			# Preparing and writing metadata output
 			output_dict = {}
 			# Write the metacata file only if there are no active users
@@ -311,16 +323,16 @@ def main():
 					writer.writerows(zip(*output_dict.values()))
 
 				# Reset metadata for next recording
-				metadata = [{"ID": [], "Position": [], "StartTime": [],"EndTime": []},
-							{"ID": [], "Position": [], "StartTime": [],"EndTime": []}]
+				metadata = [{"ID": [], "Position": [], "StartTime": [],"EndTime": [], "Marked": []},
+							{"ID": [], "Position": [], "StartTime": [],"EndTime": [], "Marked": []}]
 				metadata_fname = ''
-				
+
 
 	# Creating Main Frame
 	frm_main = tk.Frame(master=root, width = 500, height=500)
 	frm_main.pack(fill=tk.X, expand=False, side=tk.TOP)
 	# Configuring number of rows and columns in the grid
-	frm_main.columnconfigure([i for i in range(4)], weight=1, minsize=75)
+	frm_main.columnconfigure([i for i in range(5)], weight=1, minsize=75)
 	frm_main.rowconfigure([i for i in range(10)], weight=1, minsize=75)
 	# Label that reads (Enter your number) for each of the two users
 	id_lbl = tk.Label(master=frm_main, text="Enter your phone number", font=('Times New Roman', 14), bg="#A6DDFD")
@@ -334,10 +346,16 @@ def main():
 	id_ent_1.grid(row=1, column=1, columnspan=1, padx=(15,0), pady=(15,15), sticky="EW")
 	# Button for confirming the entered ID or number for each of the two users
 	st_btn_0 = tk.Button(master=frm_main, textvariable=usr_btn_stat[0], command=lambda: usr_action(id_ent_0, 0), font=('Times New Roman', 14))
-	st_btn_0.grid(row=0, column=2, padx=(15,15), pady=(15,15), sticky="W")
+	st_btn_0.grid(row=0, column=2, padx=(15,15), pady=(15,15), sticky="EW")
 	st_btn_1 = tk.Button(master=frm_main, textvariable=usr_btn_stat[1], command=lambda: usr_action(id_ent_1, 1), font=('Times New Roman', 14))
-	st_btn_1.grid(row=1, column=2, padx=(15,15), pady=(15,15), sticky="W")
-	
+	st_btn_1.grid(row=1, column=2, padx=(15,15), pady=(15,15), sticky="EW")
+	# Button for marking the recording as needs review
+	m_btn_0 = tk.Button(master=frm_main, text="Stop & Report", command=lambda: usr_action(id_ent_0, 0, True), font=('Times New Roman', 14))
+	m_btn_0.grid(row=0, column=3, padx=(15,15), pady=(15,15), sticky="EW")
+	m_btn_1 = tk.Button(master=frm_main, text="Stop & Report", command=lambda: usr_action(id_ent_1, 1, True), font=('Times New Roman', 14))
+	m_btn_1.grid(row=1, column=3, padx=(15,15), pady=(15,15), sticky="EW")
+
+
 	curid_lbl = tk.Label(master=frm_main, text="Current User: ", font=('Times New Roman', 14))
 	curid_lbl.grid(row=2, column=0, padx=(15,0), pady=(15,15), sticky="NSE")
 	conf_curid_lbl = tk.Label(master=frm_main, textvariable= usrid, font=('Times New Roman', 14))
