@@ -15,7 +15,7 @@ from tkinter import messagebox
 zed = sl.Camera()  		# Camera object	
 is_recording = False	# Recording condition (Set false to stop any thread recording)
 aborted = False			# Recording abortion indicator
-
+n_frames = 0
 
 # =========== Ctrl-C Handler =========== #
 def handler(sig, stack_frame):
@@ -76,6 +76,7 @@ def rec_loop(status, runtime_params, rec_path, usrid, dt):
 	global zed 			 # Camera object
 	global is_recording  # Recording condition (Set false to stop any thread recording)
 	global aborted  	 # Recording abortion indicator
+	global n_frames
 
 	print("\n[INFO] SETTING RECORDING PARAMETERS")
 	# Recording path
@@ -95,6 +96,7 @@ def rec_loop(status, runtime_params, rec_path, usrid, dt):
 	status.set("Recording Started")
 	while is_recording:
 		zed.grab(runtime_params)
+		n_frames += 1
 	
 	# When the user asks to stop recording
 	if aborted: 
@@ -113,11 +115,12 @@ def main():
 	global zed  		 # Camera object
 	global is_recording  # Recording condition (Set false to stop any thread recording)
 	global aborted  	 # Recording abortion indicator
+	global n_frames
 
 	# ========================= setup Section ========================= #
 	# Set default rec_path
 	# rec_path = r"/home/felemban/Documents"
-	rec_path = r"/media/felemban/Extreme SSD/Smart-Tap Data KAUST"
+	rec_path = r"/media/smarttap2/Extreme SSD/Smart-Tap Data KAUST"
 	# rec_path = r"C:\Users\English\Documents\ZED"
 
 	# arg-parse and output path setting
@@ -144,8 +147,8 @@ def main():
 
 	# Metadata structure initialization
 	metadata_fname = ''
-	metadata = [{"ID": [], "Position": [], "StartTime": [],"EndTime": [], "Marked": []},
-	      		{"ID": [], "Position": [], "StartTime": [],"EndTime": [], "Marked": []}]
+	metadata = [{"ID": [], "Position": [], "StartFrame": [],"EndFrame": [], "Marked": []},
+	      		{"ID": [], "Position": [], "StartFrame": [],"EndFrame": [], "Marked": []}]
 	
 	
 	# ========================= TK GUI Section ========================= #
@@ -212,6 +215,8 @@ def main():
 	def stop_recording():
 		global zed
 		global is_recording
+		global n_frames
+		
 		# If recording is already stopped
 		if is_recording == False:
 			print("Recording already stopped")
@@ -221,8 +226,9 @@ def main():
 		# Check if there is still a user using the interface
 		if active_usrs.get() != 0:
 			print("A user is still engaged. Waiting for them.")
-			return datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
-			# return zed.get_svo_number_of_frames
+			# return datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
+			_n_frames = n_frames
+			return _n_frames
 		
 		# Reset the recording flag
 		is_recording = False
@@ -236,7 +242,10 @@ def main():
 			recstat_lbl.configure(bg="#de5e5e")  
 			# Close the camera
 			zed.close()
-			return datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
+			# return datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
+			_n_frames = n_frames
+			n_frames = 0
+			return _n_frames
 
 
 	# Stop record and delete the recorded files
@@ -279,15 +288,17 @@ def main():
 			if start_recording() == False: 
 				messagebox.showerror("ERROR", "Camera Failed To Open")
 				return
-			# Set StartTime for this user in metadata
+			# Set StartFrame for this user in metadata
 			# If this is the a new recording:
 			if active_usrs.get() == 0:
 				# Then starting time is same as recording start time
-				metadata[usr]["StartTime"].append(metadata_fname)
+				# metadata[usr]["StartFrame"].append(metadata_fname)
+				metadata[usr]["StartFrame"].append(0)
 			# If not new recording (previous user started recording and current user joined later):
 			else: 
 				# Then start time is now.
-				metadata[usr]["StartTime"].append(datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p"))
+				# metadata[usr]["StartFrame"].append(datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p"))
+				metadata[usr]["StartFrame"].append(n_frames)
 			# Set other parts of metadata
 			metadata[usr]["ID"].append(usrid.get())
 			metadata[usr]["Position"].append(usr)
@@ -303,7 +314,8 @@ def main():
 			# Decrement active users
 			active_usrs.set(active_usrs.get() - 1)
 			# update metadata
-			metadata[usr]["EndTime"].append(stop_recording())
+			# metadata[usr]["EndFrame"].append(stop_recording())
+			metadata[usr]["EndFrame"].append(stop_recording())
 			metadata[usr]["Marked"].append(mark[usr])
 			# Reset the mark of this position for the next user
 			mark[usr] = False
@@ -325,8 +337,8 @@ def main():
 					writer.writerows(zip(*output_dict.values()))
 
 				# Reset metadata for next recording
-				metadata = [{"ID": [], "Position": [], "StartTime": [],"EndTime": [], "Marked": []},
-							{"ID": [], "Position": [], "StartTime": [],"EndTime": [], "Marked": []}]
+				metadata = [{"ID": [], "Position": [], "StartFrame": [],"EndFrame": [], "Marked": []},
+							{"ID": [], "Position": [], "StartFrame": [],"EndFrame": [], "Marked": []}]
 				metadata_fname = ''
 
 
