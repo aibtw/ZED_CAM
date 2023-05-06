@@ -15,7 +15,7 @@ from tkinter import messagebox
 zed = sl.Camera()  		# Camera object	
 is_recording = False	# Recording condition (Set false to stop any thread recording)
 aborted = False			# Recording abortion indicator
-n_frames = 0
+n_frames = 0			# Tracks number of recorded frames in real-time
 
 # =========== Ctrl-C Handler =========== #
 def handler(sig, stack_frame):
@@ -91,13 +91,14 @@ def rec_loop(status, runtime_params, rec_path, usrid, dt):
 	if err != sl.ERROR_CODE.SUCCESS:
 		print(repr(err))
 		exit(1)
-	
+
 	# Start main loop
 	status.set("Recording Started")
 	while is_recording:
 		zed.grab(runtime_params)
-		n_frames += 1
-	
+		# Increment frame number only if it was written to svo.
+		if zed.get_recording_status().status: n_frames += 1 
+		
 	# When the user asks to stop recording
 	if aborted: 
 		# If aborted, delete the file
@@ -248,15 +249,6 @@ def main():
 			return _n_frames
 
 
-	# Stop record and delete the recorded files
-	def abort_recording():
-		global aborted
-		# Set aborted flag. 
-		aborted = True  # This will cause rec func to delete the output file
-		stop_recording()
-		aborted = False # Reset aborted flag 
-
-
 	# Read User id input
 	def usr_action(id_ent, usr, pressed_mark=False):
 		global zed
@@ -397,7 +389,6 @@ def main():
 	root.mainloop()
 
 
-	
 if __name__=="__main__":
 	main()
 
