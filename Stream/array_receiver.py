@@ -9,6 +9,9 @@ import numpy as np
 import pickle
 import time
 import struct
+import signal 
+import sys
+
 
 def recvall(sock, n):
     # Helper function to recv n bytes or return None if EOF is hit
@@ -19,6 +22,13 @@ def recvall(sock, n):
             return None
         data += packet
     return data
+
+def signal_handler(sig, frame):
+    print('You pressed Ctrl+C!')
+    sys.exit(0)
+
+# Add a Ctrl-C handler
+signal.signal(signal.SIGINT, signal_handler)
 
 # Create a socket object
 s = socket.socket()
@@ -33,10 +43,9 @@ s.bind(('', port))
 s.listen(5)
 
 # To store round-trip times
-round_trip_times = []
-
 print("Waiting for connection ... \n")
 while True:
+    round_trip_times = [] # Reset every time a new connection is established
     # Establish a connection with the client
     c, addr = s.accept()
     print('Got connection from', addr)
@@ -66,6 +75,11 @@ while True:
         round_trip_times.append(round_trip_time)
 
     print('Average round trip time: ', np.mean(round_trip_times))
+    print('max round trip time: ', np.max(round_trip_times))
+
+    for i, rtt in enumerate(round_trip_times):
+        print("Round trip time ", i, ": ", rtt, "\n")
+        if i == 6: break
 
     # Close the connection with the client
     c.close()
