@@ -51,7 +51,8 @@ port = 12345
 s.connect(('localhost', port))
 
 # Create a numpy array
-array = np.random.random((1, 40, 3, 18, 1))
+array = np.random.random((1, 40, 3, 18, 1))  # Skeleton array
+# array = np.random.random((2,1,10)) # model output array (n_people, 1, n_classes)
 
 # Pickle the numpy array to send it as a byte stream
 data = pickle.dumps(array)
@@ -88,8 +89,8 @@ for _ in range(100):
     round_trip_times.append(round_trip_time)
 
 # print('Average round trip time: ', np.mean(round_trip_times))
-print('Average round trip time: ', np.mean(round_trip_times[5:]))
-print('max round trip time: ', np.max(round_trip_times[5:]))
+print('Average round trip time: ', np.mean(round_trip_times))
+print('max round trip time: ', np.max(round_trip_times))
 
 for i, rtt in enumerate(round_trip_times):
     print("Round trip time ", i, ": ", rtt, "\n")
