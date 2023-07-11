@@ -9,6 +9,9 @@ import numpy as np
 import pickle
 import struct
 import time
+import signal
+import sys
+
 
 def sendall(sock, data):
     # Helper function to send all the data
@@ -29,6 +32,13 @@ def recvall(sock, n):
         data += packet
     return data
 
+def signal_handler(sig, frame):
+    print('You pressed Ctrl+C!')
+    sys.exit(0)
+
+# Add a Ctrl-C handler
+signal.signal(signal.SIGINT, signal_handler)
+
 # Create a socket object
 s = socket.socket()
 
@@ -36,10 +46,11 @@ s = socket.socket()
 port = 12345
 
 # Connect to the server on the local computer
-s.connect(('192.168.100.79', port))
+# s.connect(('192.168.100.59', port)) # Jetson
+s.connect(('localhost', port))
 
 # Create a numpy array
-array = np.random.random((1, 20, 3, 18, 1))
+array = np.random.random((1, 40, 3, 18, 1))
 
 # Pickle the numpy array to send it as a byte stream
 data = pickle.dumps(array)
@@ -75,6 +86,13 @@ for _ in range(100):
     round_trip_time = end_time - start_time
     round_trip_times.append(round_trip_time)
 
-print('Average round trip time: ', np.mean(round_trip_times))
+# print('Average round trip time: ', np.mean(round_trip_times))
+print('Average round trip time: ', np.mean(round_trip_times[5:]))
+print('max round trip time: ', np.max(round_trip_times[5:]))
+
+for i, rtt in enumerate(round_trip_times):
+    print("Round trip time ", i, ": ", rtt, "\n")
+    if i == 6: break
+
 # Close the connection
 s.close()
