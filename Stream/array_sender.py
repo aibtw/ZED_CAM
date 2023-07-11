@@ -11,6 +11,7 @@ import struct
 import time
 import signal
 import sys
+import matplotlib.pyplot as plt
 
 
 def sendall(sock, data):
@@ -96,3 +97,9 @@ for i, rtt in enumerate(round_trip_times):
 
 # Close the connection
 s.close()
+
+# Plot the round-trip times
+plt.plot(round_trip_times)
+plt.xlabel('Iteration')
+plt.ylabel('Round-trip time (s)')
+plt.show()
