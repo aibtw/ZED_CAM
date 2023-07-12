@@ -30,6 +30,11 @@ def signal_handler(sig, frame):
 # Add a Ctrl-C handler
 signal.signal(signal.SIGINT, signal_handler)
 
+# A flag to determine the behavior:
+#   If True: calculate round trip time (send received data back to the client) 
+#   If False: send back timestamp of receiving time
+round_trip_behavior = False
+
 # Create a socket object
 s = socket.socket()
 
@@ -50,7 +55,9 @@ while True:
     c, addr = s.accept()
     print('Got connection from', addr)
     print("Receiving ... \n")
-    for _ in range(100):
+
+    for _ in range(5000):
+        # Start the timer
         start_time = time.time()
 
         # Receive the length of the data from the client first
@@ -67,19 +74,30 @@ while True:
         # Unpickle the data to get the numpy array
         array = pickle.loads(data)
 
-        # Send the data back to the client
-        c.sendall(struct.pack('!I', data_length) + data)
+        if round_trip_behavior:
+            # Send the data back to the client
+            c.sendall(struct.pack('!I', data_length) + data)
+            # Stop the timer
+            end_time = time.time()
+            # Calculate the round trip time
+            round_trip_time = end_time - start_time
+            # Store the round trip time
+            round_trip_times.append(round_trip_time)
+        else:
+            # Send the timestamp back to the client
+            c.sendall(struct.pack('!d', time.time()))
+        
 
-        end_time = time.time()
-        round_trip_time = end_time - start_time
-        round_trip_times.append(round_trip_time)
+    # print time statistics
+    if round_trip_behavior:
+        print('Average round trip time: ', np.mean(round_trip_times[10:]))
+        print('max round trip time: ', np.max(round_trip_times[10:]))
 
-    print('Average round trip time: ', np.mean(round_trip_times))
-    print('max round trip time: ', np.max(round_trip_times))
+        for i, rtt in enumerate(round_trip_times):
+            print("Round trip time ", i, ": ", rtt, "\n")
+            if i == 6: break
 
-    for i, rtt in enumerate(round_trip_times):
-        print("Round trip time ", i, ": ", rtt, "\n")
-        if i == 6: break
+    print("Done! \n")
 
     # Close the connection with the client
     c.close()
