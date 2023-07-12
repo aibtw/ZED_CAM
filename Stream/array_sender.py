@@ -53,18 +53,7 @@ port = 12345
 s.connect(('localhost', port)) # Connect to the server on the local computer
 # s.connect(('192.168.100.59', port)) # Jetson
 
-# Create a numpy array to send ---------------------------------------------- #
-# array = np.random.random((1, 40, 3, 18, 1))  # Skeleton array
-array = np.random.random((2,1,10)) # model output array (n_people, 1, n_classes)
-
-# Pickle the numpy array to send it as a byte stream ------------------------ #
-data = pickle.dumps(array)
-
 # prepare the length of the data to send ------------------------------------ #
-# data_length = struct.pack('!I', len(data))
-print("Data length: ", len(data), "\n")
-print("Data length in bytes: ", len(data).to_bytes(4, 'big'), "\n")
-data_length = len(data).to_bytes(4, 'big')
 
 round_trip_times = [] # To store round-trip times --------------------------- #
 transfer_time = [] # To store one-direction transfer times ------------------ #
@@ -72,10 +61,19 @@ transfer_time = [] # To store one-direction transfer times ------------------ #
 # Send the data ------------------------------------------------------------- #
 print("Start Sending ... \n")
 for _ in range(5000):
-    # Send the length of the data to the server first ....................... #
-    # Then send the actual data ............................................. #
     # Start the timer ....................................................... #
     start_time = time.time()
+    # Create a numpy array to send ------------------------------------------ #
+    # array = np.random.random((1, 40, 3, 18, 1))  # Skeleton
+    array = np.random.random((2,1,10)) # model output (n_people, 1, n_classes)
+    # Pickle the numpy array to send it as a byte stream -------------------- #
+    data = pickle.dumps(array)
+    # data_length = struct.pack('!I', len(data))
+    # print("Data length: ", len(data), "\n")
+    # print("Data length in bytes: ", len(data).to_bytes(4, 'big'), "\n")
+    data_length = len(data).to_bytes(4, 'big')
+
+    # Send 
     sendall(s, data_length + data)
     print("Data Sent! \n")
 
@@ -116,10 +114,12 @@ if round_trip_behavior: # --------------------------------------------------- #
         print("Round trip time ", i, ": ", rtt, "\n")
         if i == 6: break
     # Plot the round-trip times
-    plt.plot(round_trip_times)
-    plt.xlabel('Iteration')
-    plt.ylabel('Round-trip time (s)')
+    plt.hist(round_trip_times, bins=50, log=True)
+    plt.title('Round trip time histogram')
+    plt.xlabel('time (s)')
+    plt.ylabel('Frequency')
     plt.show()
+    np.savetxt('round_trip_times.txt', round_trip_times)
 else: # --------------------------------------------------------------------- #
     # Print time statistics
     print('Average transfer time: ', np.mean(transfer_time))
