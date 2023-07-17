@@ -25,7 +25,7 @@ def main():
                             coordinate_system = sl.COORDINATE_SYSTEM.IMAGE,
                             depth_mode=sl.DEPTH_MODE.ULTRA) # Choose among NEURAL, ULTRA, QUALITY, PERFORMANCE
     
-        # Arg parse
+    # Arg parse
     if len(sys.argv) >= 2:
         filepath = sys.argv[1]
         init.set_from_svo_file(filepath)
@@ -37,7 +37,7 @@ def main():
         print(repr(status))
         exit()
 
-    # Enable Positional tracking (mandatory for object detection)
+    # Enable Positional tracking (mandatory for body detection)
     positional_tracking_parameters = sl.PositionalTrackingParameters()
     # positional_tracking_parameters = sl.PositionalTrackingParameters(_mode = sl.POSITIONAL_TRACKING_MODE.QUALITY)
 
@@ -183,16 +183,16 @@ def svo_controls(key):
 def print_camera_information(cam):
     print()
     print("Distorsion factor of the right cam before calibration: {0}.".format(
-        cam.get_camera_information().calibration_parameters_raw.right_cam.disto))
+        cam.get_camera_information().camera_configuration.calibration_parameters_raw.right_cam.disto))
     print("Distorsion factor of the right cam after calibration: {0}.\n".format(
-        cam.get_camera_information().calibration_parameters.right_cam.disto))
+        cam.get_camera_information().camera_configuration.calibration_parameters.right_cam.disto))
 
     print("Confidence threshold: {0}".format(cam.get_runtime_parameters().confidence_threshold))
     print("Depth min and max range values: {0}, {1}".format(cam.get_init_parameters().depth_minimum_distance,
                                                             cam.get_init_parameters().depth_maximum_distance)
 )
-    print("Resolution: {0}, {1}.".format(round(cam.get_camera_information().camera_resolution.width, 2), cam.get_camera_information().camera_resolution.height))
-    print("Camera FPS: {0}".format(cam.get_camera_information().camera_fps))
+    print("Resolution: {0}, {1}.".format(round(cam.get_camera_information().camera_configuration.resolution.width, 2), cam.get_camera_information().camera_configuration.resolution.height))
+    print("Camera FPS: {0}".format(cam.get_camera_information().camera_configuration.fps))
     print("Frame count: {0}.\n".format(cam.get_svo_number_of_frames()))
 
 if __name__ == "__main__":
