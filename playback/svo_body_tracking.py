@@ -30,11 +30,7 @@ def main():
         filepath = sys.argv[1]
         init.set_from_svo_file(filepath)
         print("Reading SVO file: {0} \n".format(filepath))
-        
     
-    
-
-
     # Open the ZED camera
     status = cam.open(init)
     if status != sl.ERROR_CODE.SUCCESS:
@@ -43,20 +39,25 @@ def main():
 
     # Enable Positional tracking (mandatory for object detection)
     positional_tracking_parameters = sl.PositionalTrackingParameters()
+    # positional_tracking_parameters = sl.PositionalTrackingParameters(_mode = sl.POSITIONAL_TRACKING_MODE.QUALITY)
+
     # If the camera is static, uncomment the following line to have better performances and boxes sticked to the ground.
     positional_tracking_parameters.set_as_static = True
+    # positional_tracking_parameters.enable_pose_smoothing = True  # This mode enables smooth pose correction for small drift correction.
     cam.enable_positional_tracking(positional_tracking_parameters)
 
-    obj_param = sl.ObjectDetectionParameters()      # Define the Object Detection module parameters
-    obj_param.enable_body_fitting = False            # Smooth skeleton move
-    obj_param.enable_tracking = True                # Track people across images flow
-    obj_param.image_sync = True                     # run detection for every Camera grab
-    obj_param.detection_model = sl.DETECTION_MODEL.HUMAN_BODY_FAST # Object detection model, choose among HUMAN_BODY_ACCURAT, HUMAN_BODY_MEDIUM, HUMAN_BODY_FAST
-    obj_param.body_format = sl.BODY_FORMAT.POSE_18  # Choose the BODY_FORMAT you wish to use
-    #obj_param.prediction_timeout_s = 0.2            # Defalt. The time taken before change from present to searching
-
-    print("Object Detection: Loading Module...")
-    err = cam.enable_object_detection(obj_param)
+    bt_param = sl.BodyTrackingParameters()         # Define the body tracking module parameters
+    bt_param.enable_body_fitting = False           # Smooth skeleton move
+    # bt_param.enable_segmentation = False           # Defines if the mask object will be computed.
+    bt_param.enable_tracking = True                # Track people across images flow
+    bt_param.image_sync = True                     # run detection for every Camera grab
+    bt_param.detection_model = sl.BODY_TRACKING_MODEL.HUMAN_BODY_ACCURATE # body tracking model, choose among HUMAN_BODY_ACCURAT, HUMAN_BODY_MEDIUM, HUMAN_BODY_FAST
+    bt_param.body_format = sl.BODY_FORMAT.BODY_18  # Choose the BODY_FORMAT you wish to use
+    #bt_param.prediction_timeout_s = 0.2           # Defalt. The time taken before change from present to searching
+    bt_param.allow_reduced_precision_inference = False # If true, the model will run (faster, less accurate)
+    
+    print("Body Tracking: Loading Module...")
+    err = cam.enable_body_tracking(bt_param)
     if err != sl.ERROR_CODE.SUCCESS:
         print(repr(err))
         cam.close()
@@ -65,22 +66,26 @@ def main():
     # runtime parameters
     runtime = sl.RuntimeParameters(enable_depth=True)
     
-    obj_runtime_param = sl.ObjectDetectionRuntimeParameters()
-    obj_runtime_param.detection_confidence_threshold = 5
+    bt_runtime_param = sl.BodyTrackingRuntimeParameters()
+    bt_runtime_param.detection_confidence_threshold = 40
+    # bt_runtime_param.minimum_keypoints_threshold = 10
+    # bt_runtime_param.skeleton_smoothing = True  # controls the smoothing of the fitted fused skeleton, 0 to 1
     
     # Get ZED camera information
     camera_info = cam.get_camera_information()
 
     # 2D viewer utilities
-    display_resolution = sl.Resolution(min(camera_info.camera_resolution.width, 1280), min(camera_info.camera_resolution.height, 720))
+    display_resolution = sl.Resolution(
+        min(camera_info.camera_configuration.resolution.width, 1280),
+        min(camera_info.camera_configuration.resolution.height, 720)
+    )
     
-    image_scale = [display_resolution.width / camera_info.camera_resolution.width
-                 , display_resolution.height / camera_info.camera_resolution.height]
+    image_scale = [display_resolution.width / camera_info.camera_configuration.resolution.width, 
+                   display_resolution.height / camera_info.camera_configuration.resolution.height]
     
     
-    
-    # Create ZED objects filled in the main loop
-    bodies = sl.Objects()
+    # Create ZED Bodies filled in the main loop
+    bodies = sl.Bodies()
     # Image holder
     mat = sl.Mat()
 
@@ -110,7 +115,7 @@ def main():
             # Reteieve image
             cam.retrieve_image(mat, sl.VIEW.LEFT)
             # Retrieve objects
-            cam.retrieve_objects(bodies, obj_runtime_param)
+            cam.retrieve_bodies(bodies, bt_runtime_param)
 
             frame = mat.get_data()
             
@@ -122,7 +127,7 @@ def main():
                         (0, 255, 255), 
                         2, 
                         cv2.LINE_4)
-            tracking_viewer.render_2D(frame, image_scale,bodies.object_list, obj_param.enable_tracking, obj_param.body_format)
+            tracking_viewer.render_2D(frame, image_scale, bodies.body_list, bt_param.enable_tracking, bt_param.body_format)
             
             # Show the frame
             cv2.imshow("ZED", frame)
