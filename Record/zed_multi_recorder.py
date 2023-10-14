@@ -24,8 +24,19 @@ def main():
     global zeds
     
     print("[INFO] SETTING PATH")
-    rec_path = "/home/felemban/Documents/ZED/test.svo"
-#	rec_path = "/media/felemban/Extreme SSD/rec3.svo"
+    if len(sys.argv) > 1:
+        rec_name = sys.argv[1]
+        if len(rec_name.split("/")) > 1: # User has provided a path 
+            if os.path.isdir(rec_name.split("/")[:-1]): # Check if user provided path is correct
+                rec_path = rec_name
+            else:
+                print('[ERROR] The provided directory does not exist!')
+        else: # only experiment name provided. No path. Use default path 
+            rec_path = os.path.join('/home/felemban/Documents', rec_name)
+    else:
+        print('[ERROR] Please Provide experiment name (e.g. exp1.svo))')
+        exit(1)	
+
     print("[INFO] SETTING INIT PARAMETERS")
     # configuration parameters
     init_params = sl.InitParameters(camera_resolution=sl.RESOLUTION.HD720,
@@ -49,7 +60,7 @@ def main():
             exit(1)
         
         print("[INFO] SETTING REC PARAMETERS")
-        rec_params = sl.RecordingParameters(rec_path,
+        rec_params = sl.RecordingParameters(rec_path.replace('.svo', f'_{i}.svo'),
                             sl.SVO_COMPRESSION_MODE.H265)
         print("[INFO] ENABLING RECORDING")
         err = zeds[i].enable_recording(rec_params)
